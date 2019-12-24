@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from Utils import distance
 
 class KMeans():
     def __init__(self, dist='euclidean', seed=None, max_iter=100):
@@ -13,23 +14,18 @@ class KMeans():
         np.random.seed(seed=seed)
         
     def __repr__(self):
-        return 'KMeans model with ' + str(self.k) + ' segment and distance ' + self.distance + '.'
+        return 'KMeans model with ' + str(self.k) + ' segment and distance ' + self.dist + '.'
     
     def init_centroids(self, d, k):
         index = np.random.choice(d.shape[0], k, replace=False)
         return d[index]
-    
-    def distance(self, point, target):
-        if self.dist == 'euclidean':
-            dist = np.sqrt(np.sum((point - target)**2))
-        return dist
 
     def assign(self, data, centroids):
         dists = []
         for centroid in centroids:
             cur_dist = []
             for point in data:
-                cur_dist.append(self.distance(point, centroid))
+                cur_dist.append(distance(point, centroid, self.dist))
             dists.append(cur_dist)
         dists = np.array(dists).T
         return dists.argmin(axis=1)
@@ -44,7 +40,7 @@ class KMeans():
         dist = 0
         for cluster_id, centroid in enumerate(centroids):
             for point in data[clusters == cluster_id]:
-                dist += self.distance(point, centroid)
+                dist += distance(point, centroid, self.dist)
         return dist
     
     def plot2d(self, data, centroids, clusters, ax=None):
@@ -71,7 +67,7 @@ class KMeans():
                 for x in range(shape[0]):
                     row = []
                     for y in range(shape[1]):
-                        dist = int(self.distance(np.array([x,y]), np.array([x_cent,y_cent])))
+                        dist = int(distance(np.array([x,y]), np.array([x_cent,y_cent]), self.dist))
                         row.append(dist)
                     paraboloid.append(row)
                 paraboloid = np.array(paraboloid)
@@ -92,21 +88,61 @@ class KMeans():
         ax.imshow(voronoi, origin='lower', alpha=0.2)
         ax.set_xticks([])
         ax.set_yticks([])
+        ax.set_title('Best K=' + str(len(new_centroids)))
         return ax
     
     def plot_elbow(self, sse_history, ax):
-        sse_list = [sse_history[i][0] for i in range(1,len(sse_history)+1)]
-        ax.plot(range(1,len(sse_list)+1), sse_list, 'ro-')
+        enum = range(2,len(sse_history)+1)
+        sse_list = [sse_history[i][0] for i in enum]
+        silh_list = [sse_history[i][1] for i in enum]
+        ax.plot(enum, sse_list, 'ro-', label='Elbow')
+        ax.plot([], [], 'go-', label='Silhouette', alpha=0.3)
+        ax2 = ax.twinx()
+        ax2.plot(enum, silh_list, 'go-', label='Silhouette', alpha=0.3)
+        ax.legend(loc='upper right')
+        ax.set_title('Elbow and Silhouette')
         return ax
     
     def silhouette(self, data, centroids, clusters):
-        # TODO: create silhouette algorithm
-        # while waiting, the best k from silhouette will always k=3
-        if len(centroids) == 3:
-            sil = 1
-        else:
-            sil = -1
-        return sil
+        # Create index of nearest cluster for every cluster
+        nearest = []
+        for cluster_id_i, centroid_i in enumerate(centroids):
+            dists = []
+            for cluster_id_j, centroid_j in enumerate(centroids):
+                if cluster_id_i == cluster_id_j:
+                    dist = np.inf
+                else:
+                    dist = distance(centroid_i, centroid_j, self.dist)
+                dists.append(dist)
+            nearest.append(np.array(dists).argmin())
+        
+        silhouet = {}
+        all_silhouet = 0
+        for cluster_id, centroid in enumerate(centroids):
+            silhouet[cluster_id] = []
+            in_cluster = data[clusters == cluster_id]
+            for point in in_cluster:
+                distA = 0
+                if len(in_cluster) > 1:
+                    for other_point in in_cluster:
+                        distA += distance(point, other_point, self.dist)
+                    meanA = distA / (len(in_cluster) - 1)
+                else:
+                    meanA = 0
+
+                distB = 0
+                nearest_cluster = data[clusters == nearest[cluster_id]]
+                if len(nearest_cluster) > 0:
+                    for nearest_cluster_point in nearest_cluster:
+                        distB += distance(point, nearest_cluster_point, self.dist)
+                    meanB = distB / (len(nearest_cluster))
+                else:
+                    meanB = 0
+                silh = (meanB - meanA)/max(meanA, meanB)
+                silhouet[cluster_id].append(silh)
+                all_silhouet += silh
+        mean_silhouet = all_silhouet/data.shape[0]
+        return mean_silhouet
 
     def fit(self, data, k):
         self.k = k
@@ -127,7 +163,7 @@ class KMeans():
         sse_history = {}
         best_silhouette = -1
         best_k = None
-        for k in range(1, 11):
+        for k in range(2, 11):
             centroids, clusters = self.fit(self.data, k)
             sse = self.sse(self.data, centroids, clusters)
             silhouette = self.silhouette(self.data, centroids, clusters)
