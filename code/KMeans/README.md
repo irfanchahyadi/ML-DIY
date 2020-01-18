@@ -17,7 +17,7 @@ model.fit(train_data, k)
 # 2. Elbow method and Silhouette graph
 model.report()
 ```
-See [this notebook](../notebook/KMeans_example.ipynb)
+See [this notebook](../../notebook/KMeans_example.ipynb)
 
 **Description:**
 
