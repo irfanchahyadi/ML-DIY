@@ -1,5 +1,8 @@
+import sys
+sys.path.append('../code/Utils')
 import numpy as np
 import matplotlib.pyplot as plt
+# from Utils.Utils import distance
 from Utils import distance
 
 class KMeans():
