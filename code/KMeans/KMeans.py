@@ -2,7 +2,6 @@ import sys
 sys.path.append('../code/Utils')
 import numpy as np
 import matplotlib.pyplot as plt
-# from Utils.Utils import distance
 from Utils import distance
 
 class KMeans():
@@ -17,7 +16,7 @@ class KMeans():
         np.random.seed(seed=seed)
         
     def __repr__(self):
-        return 'KMeans model with ' + str(self.k) + ' segment and distance ' + self.dist + '.'
+        return 'KMeans model with distance ' + self.dist + '.'
     
     def init_centroids(self, d, k):
         index = np.random.choice(d.shape[0], k, replace=False)
@@ -174,7 +173,10 @@ class KMeans():
             if silhouette > best_silhouette:
                 best_silhouette = silhouette
                 best_k = k
-        _, _, centroids, clusters = sse_history[best_k]
+        _, _, self.centroids, clusters = sse_history[best_k]
         fig, ax = plt.subplots(1,2, figsize=(10,5))
-        self.plot2d(self.data, centroids, clusters, ax[0])
+        self.plot2d(self.data, self.centroids, clusters, ax[0])
         self.plot_elbow(sse_history, ax[1])
+
+    def predict(self, data):
+        return self.assign(data, self.centroids)

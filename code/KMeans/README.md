@@ -16,6 +16,9 @@ model.fit(train_data, k)
 # 1. visualize data point, centroids and voronoi graph (2d data only) --> from best k according to Silhouette
 # 2. Elbow method and Silhouette graph
 model.report()
+
+# Predict new data
+model.predict(data)
 ```
 See [this notebook](../../notebook/KMeans_example.ipynb)
 
